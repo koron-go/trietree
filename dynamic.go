@@ -80,21 +80,21 @@ func (dt *DTree) Put(k string) int {
 }
 
 // Scan is a wrapper for ScanContext with context.Background().
-func (dt *DTree) Scan(s string, r Reporter) error {
+func (dt *DTree) Scan(s string, r ScanReporter) error {
 	return dt.ScanContext(context.Background(), s, r)
 }
 
 // ScanContext scans a string to find matched words.
-// Reporter r will receive reports for each characters when scan.
-func (dt *DTree) ScanContext(ctx context.Context, s string, r Reporter) error {
-	rw := newReportWrapper(r, len(s))
+// ScanReporter r will receive reports for each characters when scan.
+func (dt *DTree) ScanContext(ctx context.Context, s string, r ScanReporter) error {
+	sr := newScanReport(r, len(s))
 	curr := &dt.Root
 	//fmt.Printf("ScanContext: %q\n", s)
 	for i, c := range s {
 		//fmt.Printf("  i=%d c=%c curr=%p%+[3]v\n", i, c, curr)
-		next, isRoot := dt.nextNode(curr, c)
+		next := dt.nextNode(curr, c)
 		//fmt.Printf("    next=%p%+[1]v found=%t isRoot=%t\n", next, found, isRoot)
-		rw.reportDynamic(i, c, isRoot, next)
+		sr.reportDynamic(i, c, next)
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -103,15 +103,15 @@ func (dt *DTree) ScanContext(ctx context.Context, s string, r Reporter) error {
 	return nil
 }
 
-func (dt *DTree) nextNode(curr *DNode, c rune) (*DNode, bool) {
+func (dt *DTree) nextNode(curr *DNode, c rune) *DNode {
 	root := &dt.Root
 	for {
 		next := curr.Get(c)
 		if next != nil {
-			return next, curr == root
+			return next
 		}
 		if curr == root {
-			return root, true
+			return root
 		}
 		curr = curr.Failure
 		if curr == nil {
@@ -157,7 +157,7 @@ func (dt *DTree) fillFailure(parent *DNode) {
 	//fmt.Printf("fillFailure: parent(%p)=%+[1]v\n", parent)
 	pf := parent.Failure
 	parent.Child.eachSiblings(func(curr *DNode) {
-		f, _ := dt.nextNode(pf, curr.Label)
+		f := dt.nextNode(pf, curr.Label)
 		if f == curr {
 			f = &dt.Root
 		}
