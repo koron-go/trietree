@@ -77,7 +77,15 @@ func (st *STree) ScanContext(ctx context.Context, s string, r ScanReporter) erro
 	curr := 0
 	for i, c := range s {
 		next := st.nextNode(curr, c)
-		sr.reportStatic(i, c, next, st.Nodes)
+		// emit a scan event.
+		sr.reset(i, c)
+		for n := next; n > 0; n = st.Nodes[n].Fail {
+			if edge := st.Nodes[n].EdgeID; edge > 0 {
+				sr.addID(edge)
+			}
+		}
+		sr.emit()
+		// prepare for next.
 		if err := ctx.Err(); err != nil {
 			return err
 		}

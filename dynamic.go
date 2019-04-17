@@ -89,12 +89,17 @@ func (dt *DTree) Scan(s string, r ScanReporter) error {
 func (dt *DTree) ScanContext(ctx context.Context, s string, r ScanReporter) error {
 	sr := newScanReport(r, len(s))
 	curr := &dt.Root
-	//fmt.Printf("ScanContext: %q\n", s)
 	for i, c := range s {
-		//fmt.Printf("  i=%d c=%c curr=%p%+[3]v\n", i, c, curr)
 		next := dt.nextNode(curr, c)
-		//fmt.Printf("    next=%p%+[1]v found=%t isRoot=%t\n", next, found, isRoot)
-		sr.reportDynamic(i, c, next)
+		// emit a scan event.
+		sr.reset(i, c)
+		for n := next; n != nil; n = n.Failure {
+			if n.EdgeID > 0 {
+				sr.addID(n.EdgeID)
+			}
+		}
+		sr.emit()
+		// prepare for next.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
