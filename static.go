@@ -57,7 +57,7 @@ func (st *STree) fillFailure(x int) {
 	}
 	for i := p.Start; i < p.End; i++ {
 		c := &st.Nodes[i]
-		c.Fail, _ = st.nextNode(p.Fail, c.Label)
+		c.Fail = st.nextNode(p.Fail, c.Label)
 		if c.Fail == i {
 			c.Fail = 0
 		}
@@ -66,18 +66,26 @@ func (st *STree) fillFailure(x int) {
 }
 
 // Scan is a wrapper for ScanContext with context.Background().
-func (st *STree) Scan(s string, r Reporter) error {
+func (st *STree) Scan(s string, r ScanReporter) error {
 	return st.ScanContext(context.Background(), s, r)
 }
 
 // ScanContext scans a string to find matched words.
-// Reporter r will receive reports for each characters when scan.
-func (st *STree) ScanContext(ctx context.Context, s string, r Reporter) error {
-	rw := newReportWrapper(r, len(s))
+// ScanReporter r will receive reports for each characters when scan.
+func (st *STree) ScanContext(ctx context.Context, s string, r ScanReporter) error {
+	sr := newScanReport(r, len(s))
 	curr := 0
 	for i, c := range s {
-		next, isRoot := st.nextNode(curr, c)
-		rw.reportStatic(i, c, isRoot, next, st.Nodes)
+		next := st.nextNode(curr, c)
+		// emit a scan event.
+		sr.reset(i, c)
+		for n := next; n > 0; n = st.Nodes[n].Fail {
+			if edge := st.Nodes[n].EdgeID; edge > 0 {
+				sr.addID(edge)
+			}
+		}
+		sr.emit()
+		// prepare for next.
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -86,15 +94,15 @@ func (st *STree) ScanContext(ctx context.Context, s string, r Reporter) error {
 	return nil
 }
 
-func (st *STree) nextNode(x int, c rune) (int, bool) {
+func (st *STree) nextNode(x int, c rune) int {
 	for {
 		n := &st.Nodes[x]
 		next := st.find(n.Start, n.End, c)
 		if next >= 0 {
-			return next, x == 0
+			return next
 		}
 		if x == 0 {
-			return 0, true
+			return 0
 		}
 		x = n.Fail
 	}
