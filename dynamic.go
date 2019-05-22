@@ -20,6 +20,7 @@ type DNode struct {
 	Child *DNode
 
 	EdgeID int
+	Level  int
 
 	Failure *DNode
 }
@@ -69,13 +70,16 @@ func (dn *DNode) Get(r rune) *DNode {
 // Put puts an edige for key and emits ID for it. ID will be greater than zero.
 func (dt *DTree) Put(k string) int {
 	n := &dt.Root
+	level := 0
 	for _, r := range k {
 		n = n.dig(r)
+		level++
 	}
 	if n.EdgeID <= 0 {
 		dt.lastEdgeID++
 		n.EdgeID = dt.lastEdgeID
 	}
+	n.Level = level
 	return n.EdgeID
 }
 
@@ -95,7 +99,7 @@ func (dt *DTree) ScanContext(ctx context.Context, s string, r ScanReporter) erro
 		sr.reset(i, c)
 		for n := next; n != nil; n = n.Failure {
 			if n.EdgeID > 0 {
-				sr.addID(n.EdgeID)
+				sr.add(n.EdgeID, n.Level)
 			}
 		}
 		sr.emit()

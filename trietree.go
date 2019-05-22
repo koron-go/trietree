@@ -4,7 +4,13 @@ package trietree
 type ScanEvent struct {
 	Index int
 	Label rune
-	IDs   []int
+	Nodes []ScanNode
+}
+
+// ScanNode is scanned node information.
+type ScanNode struct {
+	ID    int
+	Level int
 }
 
 // ScanReporter receive reports of scan.
@@ -24,32 +30,32 @@ type scanReport struct {
 	r  ScanReporter
 	ev ScanEvent
 
-	idBuf  []int
-	idCurr []int
+	nodesBuf  []ScanNode
+	nodesCurr []ScanNode
 }
 
 func newScanReport(r ScanReporter, n int) *scanReport {
 	return &scanReport{
-		r:     r,
-		idBuf: make([]int, n),
+		r:        r,
+		nodesBuf: make([]ScanNode, n),
 	}
 }
 
 func (sr *scanReport) reset(i int, c rune) {
 	sr.ev.Index = i
 	sr.ev.Label = c
-	sr.idCurr = sr.idBuf[:0]
+	sr.nodesCurr = sr.nodesBuf[:0]
 }
 
-func (sr *scanReport) addID(id int) {
-	sr.idCurr = append(sr.idCurr, id)
+func (sr *scanReport) add(id int, level int) {
+	sr.nodesCurr = append(sr.nodesCurr, ScanNode{ID: id, Level: level})
 }
 
 func (sr *scanReport) emit() {
-	ids := sr.idCurr
-	if len(ids) == 0 {
-		ids = nil
+	nodes := sr.nodesCurr
+	if len(nodes) == 0 {
+		nodes = nil
 	}
-	sr.ev.IDs = ids
+	sr.ev.Nodes = nodes
 	sr.r.ScanReport(sr.ev)
 }

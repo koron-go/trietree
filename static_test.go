@@ -22,26 +22,26 @@ func TestSTree_freeze(t *testing.T) {
 	st := trietree.Freeze(dt)
 	testSTreeScan(t, st, "ab", reports{
 		{0, 'a', nil},
-		{1, 'b', []int{1}},
+		{1, 'b', []node{{1, 2}}},
 	})
 	testSTreeScan(t, st, "bc", reports{
 		{0, 'b', nil},
-		{1, 'c', []int{2}},
+		{1, 'c', []node{{2, 2}}},
 	})
 	testSTreeScan(t, st, "bab", reports{
 		{0, 'b', nil},
 		{1, 'a', nil},
-		{2, 'b', []int{3, 1}},
+		{2, 'b', []node{{3, 3}, {1, 2}}},
 	})
 	testSTreeScan(t, st, "d", reports{
-		{0, 'd', []int{4}},
+		{0, 'd', []node{{4, 1}}},
 	})
 	testSTreeScan(t, st, "abcde", reports{
 		{0, 'a', nil},
-		{1, 'b', []int{1}},
-		{2, 'c', []int{2}},
-		{3, 'd', []int{4}},
-		{4, 'e', []int{5}},
+		{1, 'b', []node{{1, 2}}},
+		{2, 'c', []node{{2, 2}}},
+		{3, 'd', []node{{4, 1}}},
+		{4, 'e', []node{{5, 5}}},
 	})
 }
 
@@ -61,25 +61,25 @@ func TestSTree_serialize(t *testing.T) {
 
 	testSTreeScan(t, st, "ab", reports{
 		{0, 'a', nil},
-		{1, 'b', []int{1}},
+		{1, 'b', []node{{1, 2}}},
 	})
 	testSTreeScan(t, st, "bc", reports{
 		{0, 'b', nil},
-		{1, 'c', []int{2}},
+		{1, 'c', []node{{2, 2}}},
 	})
 	testSTreeScan(t, st, "bab", reports{
 		{0, 'b', nil},
 		{1, 'a', nil},
-		{2, 'b', []int{3, 1}},
+		{2, 'b', []node{{3, 3}, {1, 2}}},
 	})
 	testSTreeScan(t, st, "d", reports{
-		{0, 'd', []int{4}},
+		{0, 'd', []node{{4, 1}}},
 	})
 	testSTreeScan(t, st, "abcde", reports{
 		{0, 'a', nil},
-		{1, 'b', []int{1}},
-		{2, 'c', []int{2}},
-		{3, 'd', []int{4}},
-		{4, 'e', []int{5}},
+		{1, 'b', []node{{1, 2}}},
+		{2, 'c', []node{{2, 2}}},
+		{3, 'd', []node{{4, 1}}},
+		{4, 'e', []node{{5, 5}}},
 	})
 }

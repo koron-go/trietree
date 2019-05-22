@@ -10,13 +10,15 @@ import (
 
 // STree is static tree. It is optimized for serialization.
 type STree struct {
-	Nodes []SNode
+	Nodes  []SNode
+	Levels []int
 }
 
 // Freeze converts dynamic tree to static tree.
 func Freeze(src *DTree) *STree {
 	nall := src.Root.CountAll()
 	nodes := make([]SNode, nall)
+	levels := make([]int, src.lastEdgeID)
 	z := 1
 
 	var procNode func(x int, dn *DNode, i int)
@@ -33,6 +35,9 @@ func Freeze(src *DTree) *STree {
 			End:    end,
 			EdgeID: dn.EdgeID,
 		}
+		if dn.EdgeID > 0 {
+			levels[dn.EdgeID-1] = dn.Level
+		}
 		if dn.Child != nil {
 			j := i + 1
 			y := start
@@ -44,7 +49,10 @@ func Freeze(src *DTree) *STree {
 	}
 
 	procNode(0, &src.Root, 0)
-	st := &STree{Nodes: nodes}
+	st := &STree{
+		Nodes:  nodes,
+		Levels: levels,
+	}
 	st.fillFailure(0)
 
 	return st
@@ -81,7 +89,11 @@ func (st *STree) ScanContext(ctx context.Context, s string, r ScanReporter) erro
 		sr.reset(i, c)
 		for n := next; n > 0; n = st.Nodes[n].Fail {
 			if edge := st.Nodes[n].EdgeID; edge > 0 {
-				sr.addID(edge)
+				lv := -1
+				if edge-1 < len(st.Levels) {
+					lv = st.Levels[edge-1]
+				}
+				sr.add(edge, lv)
 			}
 		}
 		sr.emit()
@@ -121,6 +133,8 @@ func (st *STree) find(a, b int, c rune) int {
 // Write serializes a tree to io.Writer.
 func (st *STree) Write(w0 io.Writer) error {
 	w := newWriter(w0)
+
+	// write nodes.
 	w.writeInt(len(st.Nodes))
 	if w.err != nil {
 		return w.err
@@ -131,6 +145,19 @@ func (st *STree) Write(w0 io.Writer) error {
 			return err
 		}
 	}
+
+	// write levels.
+	w.writeInt(len(st.Levels))
+	if w.err != nil {
+		return w.err
+	}
+	for _, lv := range st.Levels {
+		w.writeInt(lv)
+	}
+	if w.err != nil {
+		return w.err
+	}
+
 	w.w.Flush()
 	return nil
 }
@@ -140,6 +167,8 @@ const intSize = 32 << (^uint(0) >> 63)
 // Read reads static tree from io.Reader.
 func Read(r0 io.Reader) (*STree, error) {
 	r := newReader(r0)
+
+	// read nodes.
 	n, err := r.readInt64()
 	if err != nil {
 		return nil, err
@@ -155,8 +184,26 @@ func Read(r0 io.Reader) (*STree, error) {
 			return nil, err
 		}
 	}
+
+	// read levels.
+	n, err = r.readInt64()
+	if err != nil {
+		return nil, err
+	}
+	if intSize == 32 && n > math.MaxInt32 {
+		return nil, errors.New("too large levels for 32bit architecture")
+	}
+	levels := make([]int, int(n))
+	for i := range levels {
+		levels[i] = r.readInt()
+	}
+	if r.err != nil {
+		return nil, r.err
+	}
+
 	return &STree{
-		Nodes: nodes,
+		Nodes:  nodes,
+		Levels: levels,
 	}, nil
 }
 
