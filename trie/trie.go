@@ -51,10 +51,12 @@ func (tr *Trie) Scan(ctx context.Context, s string, r Reporter) error {
 		ev := ReportEvent{
 			Index: src.Index,
 			Label: src.Label,
-			Nodes: make([]ReportNode, len(src.Nodes)),
 		}
-		for i, n := range src.Nodes {
-			ev.Nodes[i] = ReportNode{ID: n.ID, Level: n.Level}
+		if len(src.Nodes) > 0 {
+			ev.Nodes = make([]ReportNode, len(src.Nodes))
+			for i, n := range src.Nodes {
+				ev.Nodes[i] = ReportNode{ID: n.ID, Level: n.Level}
+			}
 		}
 		r.Report(ctx, ev)
 	})
