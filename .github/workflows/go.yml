@@ -19,8 +19,6 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - run: go test
-
-    - run: go build
+    - run: go test ./...
 
 # based on: github.com/koron-go/_skeleton/.github/workflows/go.yml
