@@ -241,7 +241,7 @@ func TestTrie_UnmarshalError(t *testing.T) {
 	if err == nil {
 		t.Error("unexpected success")
 	}
-	if tr != nil{
-		t.Errorf("unexpected trie is unmarshaled: %+v",tr)
+	if tr != nil {
+		t.Errorf("unexpected trie is unmarshaled: %+v", tr)
 	}
 }
