@@ -134,3 +134,16 @@ func TestDTree_count(t *testing.T) {
 		t.Fatalf("CountAll()=%d unexpected (expected:11)", n)
 	}
 }
+
+func TestDTree_get(t *testing.T) {
+	dt := testDTreePut(t, &trietree.DTree{}, "bc", "bab", "d", "abcde", "ab")
+	n := dt.Get("bab")
+	if n == nil {
+		t.Error("not found nodes for \"bab\"")
+	}
+	n1 := dt.Get("cab")
+	if n1 != nil {
+		t.Errorf("unexpected node found: %+v", n1)
+	}
+
+}

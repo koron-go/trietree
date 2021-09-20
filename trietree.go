@@ -1,3 +1,6 @@
+/*
+Package trietree provides trie-tree (prefix tree) algorithm.
+*/
 package trietree
 
 // ScanEvent is an event which detected in Scan/ScanContext.
