@@ -73,7 +73,7 @@ func (st *STree) fillFailure(x int) {
 	}
 }
 
-// Scan is a wrapper for ScanContext with context.Background().
+// Scan scans a string to find matched words.
 func (st *STree) Scan(s string, r ScanReporter) error {
 	return st.ScanContext(context.Background(), s, r)
 }
@@ -131,45 +131,45 @@ func (st *STree) find(a, b int, c rune) int {
 }
 
 // Write serializes a tree to io.Writer.
-func (st *STree) Write(w0 io.Writer) error {
-	w := newWriter(w0)
+func (st *STree) Write(w io.Writer) error {
+	ww := newWriter(w)
 
 	// write nodes.
-	w.writeInt(len(st.Nodes))
-	if w.err != nil {
-		return w.err
+	ww.writeInt(len(st.Nodes))
+	if ww.err != nil {
+		return ww.err
 	}
 	for _, n := range st.Nodes {
-		err := n.write(w)
+		err := n.write(ww)
 		if err != nil {
 			return err
 		}
 	}
 
 	// write levels.
-	w.writeInt(len(st.Levels))
-	if w.err != nil {
-		return w.err
+	ww.writeInt(len(st.Levels))
+	if ww.err != nil {
+		return ww.err
 	}
 	for _, lv := range st.Levels {
-		w.writeInt(lv)
+		ww.writeInt(lv)
 	}
-	if w.err != nil {
-		return w.err
+	if ww.err != nil {
+		return ww.err
 	}
 
-	w.w.Flush()
+	ww.w.Flush()
 	return nil
 }
 
 const intSize = 32 << (^uint(0) >> 63)
 
 // Read reads static tree from io.Reader.
-func Read(r0 io.Reader) (*STree, error) {
-	r := newReader(r0)
+func Read(r io.Reader) (*STree, error) {
+	rr := newReader(r)
 
 	// read nodes.
-	n, err := r.readInt64()
+	n, err := rr.readInt64()
 	if err != nil {
 		return nil, err
 	}
@@ -179,14 +179,14 @@ func Read(r0 io.Reader) (*STree, error) {
 	}
 	nodes := make([]SNode, int(n))
 	for i := range nodes {
-		err := nodes[i].read(r)
+		err := nodes[i].read(rr)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// read levels.
-	n, err = r.readInt64()
+	n, err = rr.readInt64()
 	if err != nil {
 		return nil, err
 	}
@@ -195,10 +195,10 @@ func Read(r0 io.Reader) (*STree, error) {
 	}
 	levels := make([]int, int(n))
 	for i := range levels {
-		levels[i] = r.readInt()
+		levels[i] = rr.readInt()
 	}
-	if r.err != nil {
-		return nil, r.err
+	if rr.err != nil {
+		return nil, rr.err
 	}
 
 	return &STree{

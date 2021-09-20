@@ -83,7 +83,7 @@ func (dt *DTree) Put(k string) int {
 	return n.EdgeID
 }
 
-// Scan is a wrapper for ScanContext with context.Background().
+// Scan scans a string to find matched words.
 func (dt *DTree) Scan(s string, r ScanReporter) error {
 	return dt.ScanContext(context.Background(), s, r)
 }

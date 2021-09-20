@@ -1,7 +1,7 @@
 # koron-go/trietree
 
-[![GoDoc](https://godoc.org/github.com/koron-go/trietree?status.svg)](https://godoc.org/github.com/koron-go/trietree)
-[![CircleCI](https://img.shields.io/circleci/project/github/koron-go/trietree/master.svg)](https://circleci.com/gh/koron-go/trietree/tree/master)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/koron-go/trietree)](https://pkg.go.dev/github.com/koron-go/trietree)
+[![Actions/Go](https://github.com/koron-go/trietree/workflows/Go/badge.svg)](https://github.com/koron-go/trietree/actions?query=workflow%3AGo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/koron-go/trietree)](https://goreportcard.com/report/github.com/koron-go/trietree)
 
 trietree implement trie tree and Aho-Corasick algorithm.
