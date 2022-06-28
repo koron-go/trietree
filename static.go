@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"unicode/utf8"
 )
 
 // STree is static tree. It is optimized for serialization.
@@ -128,6 +129,30 @@ func (st *STree) find(a, b int, c rune) int {
 		return x
 	}
 	return -1
+}
+
+// LongestPrefix finds a longest prefix against given s string.
+func (st *STree) LongestPrefix(s string) (prefix string, edgeID int) {
+	last := -1
+	ilast := 0
+	curr := 0
+	for i, r := range s {
+		n := st.Nodes[curr]
+		next := st.find(n.Start, n.End, r)
+		if next < 0 {
+			break
+		}
+		if st.Nodes[next].EdgeID > 0 {
+			last = next
+			ilast = i
+		}
+		curr = next
+	}
+	if last < 0 {
+		return "", 0
+	}
+	n := st.Nodes[last]
+	return s[:ilast+utf8.RuneLen(n.Label)], n.EdgeID
 }
 
 // Write serializes a tree to io.Writer.

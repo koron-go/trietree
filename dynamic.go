@@ -194,22 +194,23 @@ func (dn *DNode) CountAll() int {
 }
 
 // LongestPrefix finds a longest prefix against given s string.
-func (dt *DTree) LongestPrefix(s string) (string, *DNode) {
-	var lastNode *DNode
-	var lastI int
-	n := &dt.Root
+func (dt *DTree) LongestPrefix(s string) (prefix string, edgeID int) {
+	var last *DNode
+	ilast := 0
+	curr := &dt.Root
 	for i, r := range s {
-		n = n.Get(r)
-		if n == nil {
+		next := curr.Get(r)
+		if next == nil {
 			break
 		}
-		if n.EdgeID > 0 {
-			lastNode = n
-			lastI = i
+		if next.EdgeID > 0 {
+			last = next
+			ilast = i
 		}
+		curr = next
 	}
-	if lastNode == nil {
-		return "", nil
+	if last == nil {
+		return "", 0
 	}
-	return s[:lastI+utf8.RuneLen(lastNode.Label)], lastNode
+	return s[:ilast+utf8.RuneLen(last.Label)], last.EdgeID
 }
