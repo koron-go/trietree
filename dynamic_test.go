@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/koron-go/trietree"
 )
 
@@ -146,4 +147,29 @@ func TestDTree_get(t *testing.T) {
 		t.Errorf("unexpected node found: %+v", n1)
 	}
 
+}
+
+func TestDTree_MatchLongest(t *testing.T) {
+	dt := testDTreePut(t, &trietree.DTree{},
+		"ab", "abcde",
+		"bab", "bc",
+		"d",
+	)
+	for i, c := range []struct{ query, want string }{
+		{"a", ""},
+		{"ab", "ab"},
+		{"abcdefg", "abcde"},
+		{"b", ""},
+		{"bc", "bc"},
+		{"bcdzzz", "bc"},
+		{"babbab", "bab"},
+		{"bac", ""},
+		{"bbc", ""},
+		{"zzz", ""},
+	} {
+		got, _ := dt.LongestPrefix(c.query)
+		if d := cmp.Diff(c.want, got); d != "" {
+			t.Errorf("unexpected #%d %+v: -want +got\n%s", i, c, d)
+		}
+	}
 }
