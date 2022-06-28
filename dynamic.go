@@ -2,6 +2,7 @@ package trietree
 
 import (
 	"context"
+	"unicode/utf8"
 )
 
 // DTree is dynamic tree.
@@ -190,4 +191,25 @@ func (dn *DNode) CountAll() int {
 		c += n.CountAll()
 	})
 	return c
+}
+
+// LongestPrefix finds a longest prefix against given s string.
+func (dt *DTree) LongestPrefix(s string) (string, *DNode) {
+	var lastNode *DNode
+	var lastI int
+	n := &dt.Root
+	for i, r := range s {
+		n = n.Get(r)
+		if n == nil {
+			break
+		}
+		if n.EdgeID > 0 {
+			lastNode = n
+			lastI = i
+		}
+	}
+	if lastNode == nil {
+		return "", nil
+	}
+	return s[:lastI+utf8.RuneLen(lastNode.Label)], lastNode
 }
