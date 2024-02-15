@@ -1,5 +1,5 @@
 /*
-Package trietree provides trie-tree (prefix tree) algorithm.
+Package trietree provides two trie-tree (prefix tree) implementations.
 */
 package trietree
 

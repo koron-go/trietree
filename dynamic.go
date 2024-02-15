@@ -14,18 +14,32 @@ type DTree struct {
 
 // DNode is a node of dynamic tree.
 type DNode struct {
+	// Label is a rune assigned this node. The label is unique among sibling
+	// nodes
 	Label rune
 
-	Low   *DNode
-	High  *DNode
+	// EdgeID indicates the node has a corresponding key or not.
+	EdgeID int
+
+	// Level is equals key length when EdgeID is not zero.
+	Level int
+
+	// Low is sibling nodes which have smaller Label.
+	Low *DNode
+
+	// High is sibling node which have greater Label.
+	High *DNode
+
+	// Child is a top node of children nods.
 	Child *DNode
 
-	EdgeID int
-	Level  int
-
+	// Failure is used as a search destination when the desired Label is not
+	// found in Child. This will be filled by FillFailure().
 	Failure *DNode
 }
 
+// dig searches for a node with the desired label among its sibling nodes, or
+// creates one if it does not exist.
 func (dn *DNode) dig(c rune) *DNode {
 	p := dn.Child
 	if p == nil {
@@ -68,7 +82,8 @@ func (dn *DNode) Get(r rune) *DNode {
 	return nil
 }
 
-// Put puts an edige for key and emits ID for it. ID will be greater than zero.
+// Put allocates an edge node for k key and emits ID for it.
+// The ID will be greater than zero.
 func (dt *DTree) Put(k string) int {
 	n := &dt.Root
 	level := 0
@@ -132,6 +147,7 @@ func (dt *DTree) nextNode(curr *DNode, c rune) *DNode {
 
 type procDNode func(*DNode)
 
+// eachSiblings applies the function fn to all sibling nodes.
 func (dn *DNode) eachSiblings(fn procDNode) {
 	if dn == nil {
 		return
