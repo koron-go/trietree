@@ -131,7 +131,7 @@ func (st *STree) find(a, b int, c rune) int {
 	return -1
 }
 
-// LongestPrefix finds a longest prefix against given s string.
+// LongestPrefix finds a longest prefix node/edge matches given s string.
 func (st *STree) LongestPrefix(s string) (prefix string, edgeID int) {
 	last := -1
 	ilast := 0

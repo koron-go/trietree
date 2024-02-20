@@ -209,7 +209,7 @@ func (dn *DNode) CountAll() int {
 	return c
 }
 
-// LongestPrefix finds a longest prefix against given s string.
+// LongestPrefix finds a longest prefix node/edge matches given s string.
 func (dt *DTree) LongestPrefix(s string) (prefix string, edgeID int) {
 	var last *DNode
 	ilast := 0
