@@ -9,9 +9,9 @@ import (
 
 type Prediction struct {
 	Index int
-	Label rune
 	ID    int
 	Depth int
+	Label rune
 }
 
 func (dt *DTree) Predict(s string) iter.Seq[Prediction] {
@@ -45,8 +45,7 @@ func (dt *DTree) Predict(s string) iter.Seq[Prediction] {
 			}
 			if currNode.EdgeID > 0 {
 				//log.Printf("yield: cx=%d cr=%c cn=%v", currIdx, currRune, currNode)
-				if !yield(Prediction{Index: currIdx, Label: currRune, ID: currNode.EdgeID, Depth: currNode.Level}) {
-					currNode = nil
+				if !yield(Prediction{Index: currIdx, ID: currNode.EdgeID, Depth: currNode.Level, Label: currRune}) {
 					query = ""
 					return
 				}
@@ -72,7 +71,7 @@ func (st *STree) Predict(s string) iter.Seq[Prediction] {
 	)
 	return func(yield func(Prediction) bool) {
 		var (
-			currNode int = 0
+			currNode = 0
 			currIdx  int
 			currRune rune
 		)
@@ -85,8 +84,7 @@ func (st *STree) Predict(s string) iter.Seq[Prediction] {
 			}
 			n := st.Nodes[currNode]
 			if id := n.EdgeID; id > 0 {
-				if !yield(Prediction{Index: currIdx, Label: currRune, ID: id, Depth: st.Levels[id-1]}) {
-					currNode = 0
+				if !yield(Prediction{Index: currIdx, ID: id, Depth: st.Levels[id-1], Label: currRune}) {
 					query = ""
 					return
 				}

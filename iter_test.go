@@ -30,19 +30,19 @@ type predictorBuilder func(t *testing.T, keys ...string) predictor
 func testPredictSingle(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
 	testPredict(t, ptor, "1", []trietree.Prediction{
-		{Index: 0, Label: '1', ID: 1, Depth: 1},
+		{Index: 0, ID: 1, Depth: 1, Label: '1'},
 	})
 	testPredict(t, ptor, "2", []trietree.Prediction{
-		{Index: 0, Label: '2', ID: 2, Depth: 1},
+		{Index: 0, ID: 2, Depth: 1, Label: '2'},
 	})
 	testPredict(t, ptor, "3", []trietree.Prediction{
-		{Index: 0, Label: '3', ID: 3, Depth: 1},
+		{Index: 0, ID: 3, Depth: 1, Label: '3'},
 	})
 	testPredict(t, ptor, "4", []trietree.Prediction{
-		{Index: 0, Label: '4', ID: 4, Depth: 1},
+		{Index: 0, ID: 4, Depth: 1, Label: '4'},
 	})
 	testPredict(t, ptor, "5", []trietree.Prediction{
-		{Index: 0, Label: '5', ID: 5, Depth: 1},
+		{Index: 0, ID: 5, Depth: 1, Label: '5'},
 	})
 	testPredict(t, ptor, "6", []trietree.Prediction{})
 }
@@ -50,34 +50,34 @@ func testPredictSingle(t *testing.T, build predictorBuilder) {
 func testPredictMultiple(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
 	testPredict(t, ptor, "1234567890", []trietree.Prediction{
-		{Index: 0, Label: '1', ID: 1, Depth: 1},
-		{Index: 1, Label: '2', ID: 2, Depth: 1},
-		{Index: 2, Label: '3', ID: 3, Depth: 1},
-		{Index: 3, Label: '4', ID: 4, Depth: 1},
-		{Index: 4, Label: '5', ID: 5, Depth: 1},
+		{Index: 0, ID: 1, Depth: 1, Label: '1'},
+		{Index: 1, ID: 2, Depth: 1, Label: '2'},
+		{Index: 2, ID: 3, Depth: 1, Label: '3'},
+		{Index: 3, ID: 4, Depth: 1, Label: '4'},
+		{Index: 4, ID: 5, Depth: 1, Label: '5'},
 	})
 }
 
 func testPredictBasic(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "ab", "bc", "bab", "d", "abcde")
 	testPredict(t, ptor, "ab", []trietree.Prediction{
-		{Index: 1, Label: 'b', ID: 1, Depth: 2},
+		{Index: 1, ID: 1, Depth: 2, Label: 'b'},
 	})
 	testPredict(t, ptor, "bc", []trietree.Prediction{
-		{Index: 1, Label: 'c', ID: 2, Depth: 2},
+		{Index: 1, ID: 2, Depth: 2, Label: 'c'},
 	})
 	testPredict(t, ptor, "bab", []trietree.Prediction{
-		{Index: 2, Label: 'b', ID: 3, Depth: 3},
-		{Index: 2, Label: 'b', ID: 1, Depth: 2},
+		{Index: 2, ID: 3, Depth: 3, Label: 'b'},
+		{Index: 2, ID: 1, Depth: 2, Label: 'b'},
 	})
 	testPredict(t, ptor, "d", []trietree.Prediction{
-		{Index: 0, Label: 'd', ID: 4, Depth: 1},
+		{Index: 0, ID: 4, Depth: 1, Label: 'd'},
 	})
 	testPredict(t, ptor, "abcde", []trietree.Prediction{
-		{Index: 1, Label: 'b', ID: 1, Depth: 2},
-		{Index: 2, Label: 'c', ID: 2, Depth: 2},
-		{Index: 3, Label: 'd', ID: 4, Depth: 1},
-		{Index: 4, Label: 'e', ID: 5, Depth: 5},
+		{Index: 1, ID: 1, Depth: 2, Label: 'b'},
+		{Index: 2, ID: 2, Depth: 2, Label: 'c'},
+		{Index: 3, ID: 4, Depth: 1, Label: 'd'},
+		{Index: 4, ID: 5, Depth: 5, Label: 'e'},
 	})
 }
 
@@ -93,19 +93,16 @@ func testPredictAll(t *testing.T, builder predictorBuilder) {
 	})
 }
 
-func buildDynamicPredictor(t *testing.T, keys ...string) predictor {
-	return testDTreePut(t, &trietree.DTree{}, keys...)
-}
-
-func buildStaticPredictor(t *testing.T, keys ...string) predictor {
-	dt := testDTreePut(t, &trietree.DTree{}, keys...)
-	return trietree.Freeze(dt)
-}
-
-func TestDynanicPredict(t *testing.T) {
-	testPredictAll(t, buildDynamicPredictor)
-}
-
-func TestStaticPredict(t *testing.T) {
-	testPredictAll(t, buildStaticPredictor)
+func TestPredict(t *testing.T) {
+	t.Run("dynamic", func(t *testing.T) {
+		testPredictAll(t, func(t *testing.T, keys ...string) predictor {
+			return testDTreePut(t, &trietree.DTree{}, keys...)
+		})
+	})
+	t.Run("static", func(t *testing.T) {
+		testPredictAll(t, func(t *testing.T, keys ...string) predictor {
+			dt := testDTreePut(t, &trietree.DTree{}, keys...)
+			return trietree.Freeze(dt)
+		})
+	})
 }
