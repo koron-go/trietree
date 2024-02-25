@@ -1,23 +1,32 @@
-//go:build goexperiment.rangefunc
-
 package trietree_test
 
 import (
-	"iter"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/koron-go/trietree"
 )
 
-type predictor interface {
-	Predict(string) iter.Seq[trietree.Prediction]
+type prediction struct {
+	Start int
+	End   int
+	ID    int
+	Key   string
 }
 
-func testPredict(t *testing.T, ptor predictor, q string, want []prediction) {
+type predictIterator interface {
+	PredictIter(string) func() *trietree.Prediction
+}
+
+func testPredictIter(t *testing.T, ptor predictIterator, q string, want []prediction) {
 	t.Helper()
 	got := make([]prediction, 0, 10)
-	for p := range ptor.Predict(q) {
+	iter := ptor.PredictIter(q)
+	for {
+		p := iter()
+		if p == nil {
+			break
+		}
 		got = append(got, prediction{
 			Start: p.Start,
 			End:   p.End,
@@ -30,31 +39,31 @@ func testPredict(t *testing.T, ptor predictor, q string, want []prediction) {
 	}
 }
 
-type predictorBuilder func(t *testing.T, keys ...string) predictor
+type predictIteratorBuilder func(t *testing.T, keys ...string) predictIterator
 
-func testPredictSingle(t *testing.T, build predictorBuilder) {
+func testPredictIterSingle(t *testing.T, build predictIteratorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
-	testPredict(t, ptor, "1", []prediction{
+	testPredictIter(t, ptor, "1", []prediction{
 		{Start: 0, End: 1, ID: 1, Key: "1"},
 	})
-	testPredict(t, ptor, "2", []prediction{
+	testPredictIter(t, ptor, "2", []prediction{
 		{Start: 0, End: 1, ID: 2, Key: "2"},
 	})
-	testPredict(t, ptor, "3", []prediction{
+	testPredictIter(t, ptor, "3", []prediction{
 		{Start: 0, End: 1, ID: 3, Key: "3"},
 	})
-	testPredict(t, ptor, "4", []prediction{
+	testPredictIter(t, ptor, "4", []prediction{
 		{Start: 0, End: 1, ID: 4, Key: "4"},
 	})
-	testPredict(t, ptor, "5", []prediction{
+	testPredictIter(t, ptor, "5", []prediction{
 		{Start: 0, End: 1, ID: 5, Key: "5"},
 	})
-	testPredict(t, ptor, "6", []prediction{})
+	testPredictIter(t, ptor, "6", []prediction{})
 }
 
-func testPredictMultiple(t *testing.T, build predictorBuilder) {
+func testPredictIterMultiple(t *testing.T, build predictIteratorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
-	testPredict(t, ptor, "1234567890", []prediction{
+	testPredictIter(t, ptor, "1234567890", []prediction{
 		{Start: 0, End: 1, ID: 1, Key: "1"},
 		{Start: 1, End: 2, ID: 2, Key: "2"},
 		{Start: 2, End: 3, ID: 3, Key: "3"},
@@ -63,22 +72,22 @@ func testPredictMultiple(t *testing.T, build predictorBuilder) {
 	})
 }
 
-func testPredictBasic(t *testing.T, build predictorBuilder) {
+func testPredictIterBasic(t *testing.T, build predictIteratorBuilder) {
 	ptor := build(t, "ab", "bc", "bab", "d", "abcde")
-	testPredict(t, ptor, "ab", []prediction{
+	testPredictIter(t, ptor, "ab", []prediction{
 		{Start: 0, End: 2, ID: 1, Key: "ab"},
 	})
-	testPredict(t, ptor, "bc", []prediction{
+	testPredictIter(t, ptor, "bc", []prediction{
 		{Start: 0, End: 2, ID: 2, Key: "bc"},
 	})
-	testPredict(t, ptor, "bab", []prediction{
+	testPredictIter(t, ptor, "bab", []prediction{
 		{Start: 0, End: 3, ID: 3, Key: "bab"},
 		{Start: 1, End: 3, ID: 1, Key: "ab"},
 	})
-	testPredict(t, ptor, "d", []prediction{
+	testPredictIter(t, ptor, "d", []prediction{
 		{Start: 0, End: 1, ID: 4, Key: "d"},
 	})
-	testPredict(t, ptor, "abcde", []prediction{
+	testPredictIter(t, ptor, "abcde", []prediction{
 		{Start: 0, End: 2, ID: 1, Key: "ab"},
 		{Start: 1, End: 3, ID: 2, Key: "bc"},
 		{Start: 3, End: 4, ID: 4, Key: "d"},
@@ -86,26 +95,26 @@ func testPredictBasic(t *testing.T, build predictorBuilder) {
 	})
 }
 
-func testPredictAll(t *testing.T, builder predictorBuilder) {
+func testPredictIterAll(t *testing.T, builder predictIteratorBuilder) {
 	t.Run("single", func(t *testing.T) {
-		testPredictSingle(t, builder)
+		testPredictIterSingle(t, builder)
 	})
 	t.Run("multiple", func(t *testing.T) {
-		testPredictMultiple(t, builder)
+		testPredictIterMultiple(t, builder)
 	})
 	t.Run("basic", func(t *testing.T) {
-		testPredictBasic(t, builder)
+		testPredictIterBasic(t, builder)
 	})
 }
 
-func TestPredict(t *testing.T) {
+func TestPredictIter(t *testing.T) {
 	t.Run("dynamic", func(t *testing.T) {
-		testPredictAll(t, func(t *testing.T, keys ...string) predictor {
+		testPredictIterAll(t, func(t *testing.T, keys ...string) predictIterator {
 			return testDTreePut(t, &trietree.DTree{}, keys...)
 		})
 	})
 	t.Run("static", func(t *testing.T) {
-		testPredictAll(t, func(t *testing.T, keys ...string) predictor {
+		testPredictIterAll(t, func(t *testing.T, keys ...string) predictIterator {
 			dt := testDTreePut(t, &trietree.DTree{}, keys...)
 			return trietree.Freeze(dt)
 		})
