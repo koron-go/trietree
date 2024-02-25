@@ -7,89 +7,115 @@ import (
 	"unicode/utf8"
 )
 
+// Prediction is identifier of a key.
 type Prediction struct {
-	Index int
-	ID    int
-	Depth int
-	Label rune
+	Start int // Start is start index of key in query.
+	End   int // End is end index of key in query.
+	ID    int // ID is for edge node identifier.
 }
 
-func (dt *DTree) Predict(s string) iter.Seq[Prediction] {
-	var (
-		query    = s
-		idx      = 0
-		pivot    = &dt.Root // won't be nil
-		nextNode = func() (*DNode, int, rune) {
-			x := idx
-			r, sz := utf8.DecodeRuneInString(query)
-			query = query[sz:]
-			idx += sz
-			pivot = dt.nextNode(pivot, r)
-			return pivot, x, r
-		}
-	)
+// Predict returns an iterator which enumerates Prediction: key suggestions
+// that match the query in the tree.
+func (dt *DTree) Predict(query string) iter.Seq[Prediction] {
+	return predict[*DNode](dt, query)
+}
 
-	return func(yield func(Prediction) bool) {
-		var (
-			currNode *DNode = nil
-			currIdx  int
-			currRune rune
-		)
-		for {
-			if currNode == nil {
-				if query == "" {
-					return
-				}
-				currNode, currIdx, currRune = nextNode()
-				//log.Printf("update: cx=%d cr=%c cn=%v", currIdx, currRune, currNode)
-			}
-			if currNode.EdgeID > 0 {
-				//log.Printf("yield: cx=%d cr=%c cn=%v", currIdx, currRune, currNode)
-				if !yield(Prediction{Index: currIdx, ID: currNode.EdgeID, Depth: currNode.Level, Label: currRune}) {
-					query = ""
-					return
-				}
-			}
-			currNode = currNode.Failure
-		}
+// Predict returns an iterator which enumerates Prediction: key suggestions
+// that match the query in the tree.
+func (st *STree) Predict(query string) iter.Seq[Prediction] {
+	return predict[int](st, query)
+}
+
+type predictableTree[T comparable] interface {
+	root() T
+	nextNode(T, rune) T
+	nodeId(T) int
+	nodeLevel(T) int
+	nodeFail(T) T
+}
+
+// methods DTree satisfies predictableTree[*DNode]
+func (dt *DTree) root() *DNode             { return &dt.Root }
+func (dt *DTree) nodeId(n *DNode) int      { return n.EdgeID }
+func (dt *DTree) nodeLevel(n *DNode) int   { return n.Level }
+func (dt *DTree) nodeFail(n *DNode) *DNode { return n.Failure }
+
+// methods STree satisfies predictableTree[int]
+func (st *STree) root() int           { return 0 }
+func (st *STree) nodeId(n int) int    { return st.Nodes[n].EdgeID }
+func (st *STree) nodeLevel(n int) int { return st.Levels[st.nodeId(n)-1] }
+func (st *STree) nodeFail(n int) int  { return st.Nodes[n].Fail }
+
+type traverser[T comparable] struct {
+	tree  predictableTree[T]
+	query string
+	pivot T
+	index int
+}
+
+func newTraverser[T comparable](tree predictableTree[T], query string) traverser[T] {
+	return traverser[T]{
+		tree:  tree,
+		query: query,
+		pivot: tree.root(),
+		index: 0,
 	}
 }
 
-func (st *STree) Predict(s string) iter.Seq[Prediction] {
-	var (
-		query    = s
-		idx      = 0
-		pivot    = 0
-		nextNode = func() (nodeID int, nodeIdx int, nodeRune rune) {
-			nodeIdx = idx
-			nodeRune, sz := utf8.DecodeRuneInString(query)
-			query = query[sz:]
-			idx += sz
-			pivot = st.nextNode(pivot, nodeRune)
-			return pivot, nodeIdx, nodeRune
+// next consumes a rune from query, and determine next node to travese tree.
+// this returns next node, and end index of last parsed rune in query.
+func (tr *traverser[T]) next() (node T, end int) {
+	var zero T
+	if tr.query == "" {
+		return zero, 0
+	}
+	r, sz := utf8.DecodeRuneInString(tr.query)
+	if sz == 0 {
+		return zero, 0
+	}
+	tr.query = tr.query[sz:]
+	tr.index += sz
+	tr.pivot = tr.tree.nextNode(tr.pivot, r)
+	return tr.pivot, tr.index
+}
+
+func (tr *traverser[T]) close() {
+	tr.query = ""
+}
+
+// trailingIndex returns the index of the n'th character from the end of string s.
+func trailingIndex(s string, n int) int {
+	x := len(s)
+	for n > 0 && x > 0 {
+		_, sz := utf8.DecodeLastRuneInString(s[:x])
+		if sz == 0 {
+			break
 		}
-	)
+		x -= sz
+		n--
+	}
+	return x
+}
+
+func predict[T comparable](tree predictableTree[T], query string) iter.Seq[Prediction] {
+	var zero T
+	tr := newTraverser[T](tree, query)
 	return func(yield func(Prediction) bool) {
-		var (
-			currNode = 0
-			currIdx  int
-			currRune rune
-		)
 		for {
-			if currNode == 0 {
-				if query == "" {
-					return
-				}
-				currNode, currIdx, currRune = nextNode()
+			node, end := tr.next()
+			if node == zero {
+				return
 			}
-			n := st.Nodes[currNode]
-			if id := n.EdgeID; id > 0 {
-				if !yield(Prediction{Index: currIdx, ID: id, Depth: st.Levels[id-1], Label: currRune}) {
-					query = ""
-					return
+			for node != zero {
+				if id := tree.nodeId(node); id > 0 {
+					st := trailingIndex(query[:end], tree.nodeLevel(node))
+					if !yield(Prediction{Start: st, End: end, ID: id}) {
+						tr.close()
+						return
+					}
 				}
+				node = tree.nodeFail(node)
 			}
-			currNode = n.Fail
 		}
 	}
 }

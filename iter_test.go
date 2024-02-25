@@ -10,15 +10,27 @@ import (
 	"github.com/koron-go/trietree"
 )
 
+type prediction struct {
+	Start int
+	End   int
+	ID    int
+	Key   string
+}
+
 type predictor interface {
 	Predict(string) iter.Seq[trietree.Prediction]
 }
 
-func testPredict(t *testing.T, ptor predictor, q string, want []trietree.Prediction) {
+func testPredict(t *testing.T, ptor predictor, q string, want []prediction) {
 	t.Helper()
-	got := make([]trietree.Prediction, 0, 10)
+	got := make([]prediction, 0, 10)
 	for p := range ptor.Predict(q) {
-		got = append(got, p)
+		got = append(got, prediction{
+			Start: p.Start,
+			End:   p.End,
+			ID:    p.ID,
+			Key:   q[p.Start:p.End],
+		})
 	}
 	if d := cmp.Diff(want, got); d != "" {
 		t.Errorf("unexpected predictions: -want +got\n%s", d)
@@ -29,55 +41,55 @@ type predictorBuilder func(t *testing.T, keys ...string) predictor
 
 func testPredictSingle(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
-	testPredict(t, ptor, "1", []trietree.Prediction{
-		{Index: 0, ID: 1, Depth: 1, Label: '1'},
+	testPredict(t, ptor, "1", []prediction{
+		{Start: 0, End: 1, ID: 1, Key: "1"},
 	})
-	testPredict(t, ptor, "2", []trietree.Prediction{
-		{Index: 0, ID: 2, Depth: 1, Label: '2'},
+	testPredict(t, ptor, "2", []prediction{
+		{Start: 0, End: 1, ID: 2, Key: "2"},
 	})
-	testPredict(t, ptor, "3", []trietree.Prediction{
-		{Index: 0, ID: 3, Depth: 1, Label: '3'},
+	testPredict(t, ptor, "3", []prediction{
+		{Start: 0, End: 1, ID: 3, Key: "3"},
 	})
-	testPredict(t, ptor, "4", []trietree.Prediction{
-		{Index: 0, ID: 4, Depth: 1, Label: '4'},
+	testPredict(t, ptor, "4", []prediction{
+		{Start: 0, End: 1, ID: 4, Key: "4"},
 	})
-	testPredict(t, ptor, "5", []trietree.Prediction{
-		{Index: 0, ID: 5, Depth: 1, Label: '5'},
+	testPredict(t, ptor, "5", []prediction{
+		{Start: 0, End: 1, ID: 5, Key: "5"},
 	})
-	testPredict(t, ptor, "6", []trietree.Prediction{})
+	testPredict(t, ptor, "6", []prediction{})
 }
 
 func testPredictMultiple(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "1", "2", "3", "4", "5")
-	testPredict(t, ptor, "1234567890", []trietree.Prediction{
-		{Index: 0, ID: 1, Depth: 1, Label: '1'},
-		{Index: 1, ID: 2, Depth: 1, Label: '2'},
-		{Index: 2, ID: 3, Depth: 1, Label: '3'},
-		{Index: 3, ID: 4, Depth: 1, Label: '4'},
-		{Index: 4, ID: 5, Depth: 1, Label: '5'},
+	testPredict(t, ptor, "1234567890", []prediction{
+		{Start: 0, End: 1, ID: 1, Key: "1"},
+		{Start: 1, End: 2, ID: 2, Key: "2"},
+		{Start: 2, End: 3, ID: 3, Key: "3"},
+		{Start: 3, End: 4, ID: 4, Key: "4"},
+		{Start: 4, End: 5, ID: 5, Key: "5"},
 	})
 }
 
 func testPredictBasic(t *testing.T, build predictorBuilder) {
 	ptor := build(t, "ab", "bc", "bab", "d", "abcde")
-	testPredict(t, ptor, "ab", []trietree.Prediction{
-		{Index: 1, ID: 1, Depth: 2, Label: 'b'},
+	testPredict(t, ptor, "ab", []prediction{
+		{Start: 0, End: 2, ID: 1, Key: "ab"},
 	})
-	testPredict(t, ptor, "bc", []trietree.Prediction{
-		{Index: 1, ID: 2, Depth: 2, Label: 'c'},
+	testPredict(t, ptor, "bc", []prediction{
+		{Start: 0, End: 2, ID: 2, Key: "bc"},
 	})
-	testPredict(t, ptor, "bab", []trietree.Prediction{
-		{Index: 2, ID: 3, Depth: 3, Label: 'b'},
-		{Index: 2, ID: 1, Depth: 2, Label: 'b'},
+	testPredict(t, ptor, "bab", []prediction{
+		{Start: 0, End: 3, ID: 3, Key: "bab"},
+		{Start: 1, End: 3, ID: 1, Key: "ab"},
 	})
-	testPredict(t, ptor, "d", []trietree.Prediction{
-		{Index: 0, ID: 4, Depth: 1, Label: 'd'},
+	testPredict(t, ptor, "d", []prediction{
+		{Start: 0, End: 1, ID: 4, Key: "d"},
 	})
-	testPredict(t, ptor, "abcde", []trietree.Prediction{
-		{Index: 1, ID: 1, Depth: 2, Label: 'b'},
-		{Index: 2, ID: 2, Depth: 2, Label: 'c'},
-		{Index: 3, ID: 4, Depth: 1, Label: 'd'},
-		{Index: 4, ID: 5, Depth: 5, Label: 'e'},
+	testPredict(t, ptor, "abcde", []prediction{
+		{Start: 0, End: 2, ID: 1, Key: "ab"},
+		{Start: 1, End: 3, ID: 2, Key: "bc"},
+		{Start: 3, End: 4, ID: 4, Key: "d"},
+		{Start: 0, End: 5, ID: 5, Key: "abcde"},
 	})
 }
 
