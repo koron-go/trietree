@@ -59,15 +59,10 @@ func (st *STrie[T]) Marshal(w io.Writer) error {
 	if err := st.tree.Write(w); err != nil {
 		return err
 	}
-	// write st.values to io.Writer
-	enc := gob.NewEncoder(w)
-	for _, v := range st.values {
-		err := enc.Encode(v)
-		if err != nil {
-			return err
-		}
+	if err := gob.NewEncoder(w).Encode(st.values); err != nil {
+		return err
 	}
-	return nil
+	return err
 }
 
 func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
@@ -76,13 +71,9 @@ func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
 		return nil, err
 	}
 	// read v from r then append it to values.
-	values := make([]T, len(tree.Levels))
-	dec := gob.NewDecoder(r)
-	for i := range values {
-		err := dec.Decode(&values[i])
-		if err != nil {
-			return nil, err
-		}
+	values := make([]T, 0, len(tree.Levels))
+	if err := gob.NewDecoder(r).Decode(values); err != nil {
+		return nil, err
 	}
 	return &STrie[T]{tree: *tree, values: values}, nil
 }
