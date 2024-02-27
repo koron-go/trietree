@@ -40,16 +40,16 @@ type STrie[T any] struct {
 	values []T
 }
 
-func Freeze[T any](src *DTrie[T], copyValues bool) *STrie[T] {
-	tree := *trietree.Freeze(&src.tree)
+func (dt *DTrie[T]) Freeze(copyValues bool) *STrie[T] {
+	tree := trietree.Freeze(&dt.tree)
 	var values []T
 	if copyValues {
-		values = make([]T, len(src.values))
-		copy(values, src.values)
+		values = make([]T, len(values))
+		copy(values, dt.values)
 	} else {
-		values = src.values
+		values = dt.values
 	}
-	return &STrie[T]{tree: tree, values: values}
+	return &STrie[T]{tree: *tree, values: values}
 }
 
 func (st *STrie[T]) Marshal(w io.Writer) error {
@@ -62,7 +62,7 @@ func (st *STrie[T]) Marshal(w io.Writer) error {
 	if err := gob.NewEncoder(w).Encode(st.values); err != nil {
 		return err
 	}
-	return err
+	return nil
 }
 
 func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
@@ -70,9 +70,12 @@ func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(tree.Levels) == 0 {
+		return &STrie[T]{tree: *tree}, nil
+	}
 	// read v from r then append it to values.
 	values := make([]T, 0, len(tree.Levels))
-	if err := gob.NewDecoder(r).Decode(values); err != nil {
+	if err := gob.NewDecoder(r).Decode(&values); err != nil {
 		return nil, err
 	}
 	return &STrie[T]{tree: *tree, values: values}, nil

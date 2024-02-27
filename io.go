@@ -40,14 +40,34 @@ func (w *writer) writeInt64(v int64) error {
 	return nil
 }
 
+type wrapByteReader struct {
+	io.Reader
+}
+
+func (br wrapByteReader) ReadByte() (byte, error) {
+	var b [1]byte
+	n, err := br.Read(b[:])
+	if n != 1 {
+		return 0, err
+	}
+	return b[0], nil
+}
+
+func toByteReader(r io.Reader) io.ByteReader {
+	if br, ok := r.(io.ByteReader); ok {
+		return br
+	}
+	return wrapByteReader{r}
+}
+
 type reader struct {
-	r   *bufio.Reader
+	r   io.ByteReader
 	err error
 }
 
 func newReader(r io.Reader) *reader {
 	return &reader{
-		r: bufio.NewReader(r),
+		r: toByteReader(r),
 	}
 }
 
