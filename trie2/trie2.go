@@ -23,6 +23,7 @@ func (dt *DTrie[T]) Put(k string, v T) {
 		dt.values = append(dt.values, v)
 		return
 	}
+	// update an existed value.
 	dt.values[id-1] = v
 }
 
@@ -44,7 +45,7 @@ func (dt *DTrie[T]) Freeze(copyValues bool) *STrie[T] {
 	tree := trietree.Freeze(&dt.tree)
 	var values []T
 	if copyValues {
-		values = make([]T, len(values))
+		values = make([]T, len(dt.values))
 		copy(values, dt.values)
 	} else {
 		values = dt.values
@@ -52,12 +53,18 @@ func (dt *DTrie[T]) Freeze(copyValues bool) *STrie[T] {
 	return &STrie[T]{tree: *tree, values: values}
 }
 
-func (st *STrie[T]) Marshal(w io.Writer) error {
+func (st *STrie[T]) Marshal(w io.Writer, marshalValues func(io.Writer, []T) error) error {
 	if len(st.values) != len(st.tree.Levels) {
 		return fmt.Errorf("number of values and levels unmatched: value=%d levels=%d", len(st.values), len(st.tree.Levels))
 	}
 	if err := st.tree.Write(w); err != nil {
 		return err
+	}
+	if marshalValues != nil {
+		if err := marshalValues(w, st.values); err != nil {
+			return fmt.Errorf("failed to marshal values: %w", err)
+		}
+		return nil
 	}
 	if err := gob.NewEncoder(w).Encode(st.values); err != nil {
 		return err
@@ -65,7 +72,7 @@ func (st *STrie[T]) Marshal(w io.Writer) error {
 	return nil
 }
 
-func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
+func Unmarshal[T any](r io.Reader, unmarshalValues func(io.Reader, int) ([]T, error)) (*STrie[T], error) {
 	tree, err := trietree.Read(r)
 	if err != nil {
 		return nil, err
@@ -73,7 +80,15 @@ func Unmarshal[T any](r io.Reader) (*STrie[T], error) {
 	if len(tree.Levels) == 0 {
 		return &STrie[T]{tree: *tree}, nil
 	}
-	// read v from r then append it to values.
+	// read values from r with unmarshalValues.
+	if unmarshalValues != nil {
+		values, err := unmarshalValues(r, len(tree.Levels))
+		if err != nil {
+			return nil, err
+		}
+		return &STrie[T]{tree: *tree, values: values}, nil
+	}
+	// read values from r without unmarshalValues.
 	values := make([]T, 0, len(tree.Levels))
 	if err := gob.NewDecoder(r).Decode(&values); err != nil {
 		return nil, err
