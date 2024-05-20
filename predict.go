@@ -99,18 +99,20 @@ func trailingIndex(s string, n int) int {
 
 func predictIter[T comparable](tree predictableTree[T], query string) func() *Prediction {
 	var (
-		zero T
 		tr   = newTraverser[T](tree, query)
 		req  = true
 		node T
 		end  int
 	)
 	return func() *Prediction {
+		//log.Printf("predictIter: req=%t end=%d node=%+v", req, end, node)
 		var p *Prediction
 		for p == nil {
 			if req {
+				//log.Printf("  next: tr{ q=%s x=%d p=%+v }", tr.query, tr.index, tr.pivot)
 				var valid bool
 				node, end, valid = tr.next()
+				//log.Printf("    end=%d valid=%t node=%+v", end, valid, node)
 				if !valid {
 					tr.close()
 					return nil
@@ -119,16 +121,16 @@ func predictIter[T comparable](tree predictableTree[T], query string) func() *Pr
 			}
 			for !req && p == nil {
 				id := tree.nodeId(node)
+				//log.Printf("  id=%d node=%+v", id, node)
 				if id > 0 {
 					st := trailingIndex(query[:end], tree.nodeLevel(node))
 					p = &Prediction{Start: st, End: end, ID: id}
 				}
+				req = node == tree.root()
 				node = tree.nodeFail(node)
-				if id == 0 && node == zero {
-					req = true
-				}
 			}
 		}
+		//log.Printf("  return p=%+v node=%+v", p, node)
 		return p
 	}
 }
