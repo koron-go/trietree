@@ -63,20 +63,20 @@ func newTraverser[T comparable](tree predictableTree[T], query string) traverser
 }
 
 // next consumes a rune from query, and determine next node to travese tree.
-// this returns next node, and end index of last parsed rune in query.
-func (tr *traverser[T]) next() (node T, end int) {
+// this returns next node, and tail index of last parsed rune in query.
+func (tr *traverser[T]) next() (node T, end int, valid bool) {
 	var zero T
 	if tr.query == "" {
-		return zero, 0
+		return zero, 0, false
 	}
 	r, sz := utf8.DecodeRuneInString(tr.query)
 	if sz == 0 {
-		return zero, 0
+		return zero, 0, false
 	}
 	tr.query = tr.query[sz:]
 	tr.index += sz
 	tr.pivot = tr.tree.nextNode(tr.pivot, r)
-	return tr.pivot, tr.index
+	return tr.pivot, tr.index, true
 }
 
 func (tr *traverser[T]) close() {
@@ -101,25 +101,32 @@ func predictIter[T comparable](tree predictableTree[T], query string) func() *Pr
 	var (
 		zero T
 		tr   = newTraverser[T](tree, query)
+		req  = true
 		node T
 		end  int
 	)
 	return func() *Prediction {
 		var p *Prediction
 		for p == nil {
-			if node == zero {
-				node, end = tr.next()
-				if node == zero {
+			if req {
+				var valid bool
+				node, end, valid = tr.next()
+				if !valid {
 					tr.close()
 					return nil
 				}
+				req = false
 			}
-			for node != zero && p == nil {
-				if id := tree.nodeId(node); id > 0 {
+			for !req && p == nil {
+				id := tree.nodeId(node)
+				if id > 0 {
 					st := trailingIndex(query[:end], tree.nodeLevel(node))
 					p = &Prediction{Start: st, End: end, ID: id}
 				}
 				node = tree.nodeFail(node)
+				if id == 0 && node == zero {
+					req = true
+				}
 			}
 		}
 		return p

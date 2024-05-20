@@ -129,11 +129,11 @@ func TestDTree_PredictMultiple(t *testing.T) {
 	})
 }
 
-//func TestSTree_PredictMultiple(t *testing.T) {
-//	dt := testDTreePut(t, &trietree.DTree{}, "a", "ab", "abc", "d", "de")
-//	st := trietree.Freeze(dt)
-//	testPredictIter(t, st, "azd", []prediction{
-//		{Start: 0, End: 1, ID: 1, Key: "a"},
-//		{Start: 2, End: 3, ID: 4, Key: "d"},
-//	})
-//}
+func TestSTree_PredictMultiple(t *testing.T) {
+	dt := testDTreePut(t, &trietree.DTree{}, "a", "ab", "abc", "d", "de")
+	st := trietree.Freeze(dt)
+	testPredictIter(t, st, "azd", []prediction{
+		{Start: 0, End: 1, ID: 1, Key: "a"},
+		{Start: 2, End: 3, ID: 4, Key: "d"},
+	})
+}
