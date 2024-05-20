@@ -15,7 +15,7 @@ type prediction struct {
 }
 
 type predictIterator interface {
-	PredictIter(string) trietree.PredictIter
+	PredictIter(string) trietree.PredictionIter
 }
 
 func testPredictIter(t *testing.T, ptor predictIterator, q string, want []prediction) {

@@ -11,18 +11,18 @@ type Prediction struct {
 	ID    int // ID is for edge node identifier.
 }
 
-// PredictIter is the iterator of Prediction.
-type PredictIter func() *Prediction
+// PredictionIter is the iterator of Prediction.
+type PredictionIter func() *Prediction
 
-// PredictIter returns an iterator function PredictIter, which enumerates
+// PredictIter returns an iterator function PredictionIter, which enumerates
 // Prediction: key suggestions that match the query in the tree.
-func (dt *DTree) PredictIter(query string) PredictIter {
+func (dt *DTree) PredictIter(query string) PredictionIter {
 	return predictIter[*DNode](dt, query)
 }
 
-// PredictIter returns an iterator function PredictIter, which enumerates
+// PredictIter returns an iterator function PredictionIter, which enumerates
 // Prediction: key suggestions that match the query in the tree.
-func (st *STree) PredictIter(query string) PredictIter {
+func (st *STree) PredictIter(query string) PredictionIter {
 	return predictIter[int](st, query)
 }
 
