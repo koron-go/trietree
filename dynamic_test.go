@@ -173,3 +173,12 @@ func TestDTree_MatchLongest(t *testing.T) {
 		}
 	}
 }
+
+func TestDTree_ScanMultiple(t *testing.T) {
+	dt := testDTreePut(t, &trietree.DTree{}, "a", "ab", "abc", "d", "de")
+	testDTreeScan(t, dt, "azd", reports{
+		{0, 'a', []node{{1, 1}}},
+		{1, 'z', nil},
+		{2, 'd', []node{{4, 1}}},
+	})
+}
