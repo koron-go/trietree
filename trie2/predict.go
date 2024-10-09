@@ -1,6 +1,10 @@
 package trie2
 
-import "github.com/koron-go/trietree"
+import (
+	"iter"
+
+	"github.com/koron-go/trietree"
+)
 
 type Prediction[T any] struct {
 	Start int    // Start is the start index of Key in the query.
@@ -33,4 +37,29 @@ func (dt *DTrie[T]) PredictIter(query string) PredictionIter[T] {
 
 func (st *STrie[T]) PredictIter(query string) PredictionIter[T] {
 	return predictIter(query, st.tree.PredictIter(query), st.values)
+}
+
+func predict[T any](query string, iter iter.Seq[trietree.Prediction], values []T) iter.Seq[Prediction[T]] {
+	return func(yield func(Prediction[T]) bool) {
+		for p := range iter {
+			if !yield(Prediction[T]{
+				Start: p.Start,
+				End:   p.End,
+				Key:   query[p.Start:p.End],
+				Value: values[p.ID-1],
+			}) {
+				break
+			}
+		}
+	}
+}
+
+// Predict returns an iterator which enumerates Prediction.
+func (dt *DTrie[T]) Predict(query string) iter.Seq[Prediction[T]] {
+	return predict[T](query, dt.tree.Predict(query), dt.values)
+}
+
+// Predict returns an iterator which enumerates Prediction.
+func (st *STrie[T]) Predict(query string) iter.Seq[Prediction[T]] {
+	return predict[T](query, st.tree.Predict(query), st.values)
 }
